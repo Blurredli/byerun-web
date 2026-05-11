@@ -4,13 +4,18 @@ import { resolve } from 'path';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({ mode }) => {
+  // 确保在正确的目录下加载环境变量
   const env = loadEnv(mode, process.cwd());
 
   return {
-    plugins: [tailwindcss(), vue()],
+    plugins: [
+      tailwindcss(), // Tailwind v4 插件建议放在 Vue 插件之前
+      vue()
+    ],
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src'),
+        // 使用 process.cwd() 获取当前根目录，避免 ESM 下 __dirname 报错
+        '@': resolve(process.cwd(), 'src'),
       },
     },
     optimizeDeps: {
