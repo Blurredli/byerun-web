@@ -6,7 +6,7 @@ const { createLogger, transports, format } = require('winston');
 const app = express();
 const port = 3000;
 
-// 创建 winston 日志记录器
+// 创建日志记录器
 const logger = createLogger({
     level: 'info',
     format: format.combine(
@@ -21,50 +21,49 @@ const logger = createLogger({
     ]
 });
 
-// 使用 morgan 中间件记录 HTTP 请求日志
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
-
-// 设置请求主体大小限制
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// 处理跨域预检请求
 app.use((req, res, next) => {
+    res.set({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': '*'
+    });
     if (req.method === 'OPTIONS') {
-        res.set({
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': '*'
-        });
-        res.sendStatus(200);
-    } else {
-        next();
+        return res.sendStatus(200);
     }
+    next();
 });
 
+// 注意：这里必须有 async 关键字
 app.all('*', async (req, res) => {
     const url = new URL(req.originalUrl, `http://${req.headers.host}`);
     const backendUrl = 'https://run-lb.tanmasports.com/v1' + url.pathname + url.search;
 
     logger.info(`Forwarding request to: ${backendUrl}`);
 
+    // 清理请求头，防止官方服务器拦截 (解决 405 错误的关键)
     const newHeaders = { ...req.headers };
     delete newHeaders.host;
+    delete newHeaders.origin;
+    delete newHeaders.referer;
+    delete newHeaders['content-length']; 
+
+    // 模拟移动端环境
+    newHeaders['user-agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
 
     const init = {
         method: req.method,
         headers: newHeaders,
-        body: req.method === 'GET' ? null : JSON.stringify(req.body)
+        body: (req.method === 'GET' || req.method === 'HEAD') ? null : JSON.stringify(req.body)
     };
 
     try {
-        const response = await fetch(backendUrl, init);
+        const response = await fetch(backendUrl, init); // 这里的 await 必须配合上方的 async 使用
         const body = await response.text();
-
-        res.set({
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': '*'
-        });
 
         res.status(response.status).send(body);
     } catch (error) {
