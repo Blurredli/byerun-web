@@ -42,13 +42,17 @@ app.use((req, res, next) => {
 });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // ...前面的代码保持不变
+=======
+>>>>>>> parent of d4b1a61 (本地部署)
 =======
 >>>>>>> parent of d4b1a61 (本地部署)
 app.all('*', async (req, res) => {
     const url = new URL(req.originalUrl, `http://${req.headers.host}`);
     const backendUrl = 'https://run-lb.tanmasports.com/v1' + url.pathname + url.search;
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     const newHeaders = { ...req.headers };
     delete newHeaders.host;
@@ -57,6 +61,12 @@ app.all('*', async (req, res) => {
     delete newHeaders['content-length']; // 解决 405 关键：让 fetch 重新计算长度
 
     newHeaders['user-agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+=======
+    logger.info(`Forwarding request to: ${backendUrl}`);
+
+    const newHeaders = { ...req.headers };
+    delete newHeaders.host;
+>>>>>>> parent of d4b1a61 (本地部署)
 
     try {
         const response = await fetch(backendUrl, {
@@ -87,6 +97,9 @@ app.all('*', async (req, res) => {
             'Access-Control-Allow-Headers': '*'
         });
 
+<<<<<<< HEAD
+>>>>>>> parent of d4b1a61 (本地部署)
+=======
 >>>>>>> parent of d4b1a61 (本地部署)
         res.status(response.status).send(body);
     } catch (error) {
