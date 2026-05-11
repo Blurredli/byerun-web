@@ -38,39 +38,34 @@ app.use((req, res, next) => {
     next();
 });
 
-// 注意：这里必须有 async 关键字
+// ...前面的代码保持不变
 app.all('*', async (req, res) => {
     const url = new URL(req.originalUrl, `http://${req.headers.host}`);
     const backendUrl = 'https://run-lb.tanmasports.com/v1' + url.pathname + url.search;
 
-    logger.info(`Forwarding request to: ${backendUrl}`);
-
-    // 清理请求头，防止官方服务器拦截 (解决 405 错误的关键)
     const newHeaders = { ...req.headers };
     delete newHeaders.host;
-    delete newHeaders.origin;
+    delete newHeaders.origin;   // 解决 405 关键：删除跨域源信息
     delete newHeaders.referer;
-    delete newHeaders['content-length']; 
+    delete newHeaders['content-length']; // 解决 405 关键：让 fetch 重新计算长度
 
-    // 模拟移动端环境
     newHeaders['user-agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
 
-    const init = {
-        method: req.method,
-        headers: newHeaders,
-        body: (req.method === 'GET' || req.method === 'HEAD') ? null : JSON.stringify(req.body)
-    };
-
     try {
-        const response = await fetch(backendUrl, init); // 这里的 await 必须配合上方的 async 使用
+        const response = await fetch(backendUrl, {
+            method: req.method,
+            headers: newHeaders,
+            body: (req.method === 'GET' || req.method === 'HEAD') ? null : JSON.stringify(req.body)
+        });
         const body = await response.text();
-
         res.status(response.status).send(body);
     } catch (error) {
-        logger.error(`Error during fetch: ${error.message}`);
         res.status(500).send('Internal Server Error');
     }
 });
+
+// Vercel 适配：必须导出 app 实例
+module.exports = app;
 
 app.listen(port, () => {
     logger.info(`Server is running on http://localhost:${port}`);
