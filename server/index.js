@@ -6,7 +6,7 @@ const { createLogger, transports, format } = require('winston');
 const app = express();
 const port = 3000;
 
-// 创建日志记录器
+// 创建 winston 日志记录器
 const logger = createLogger({
     level: 'info',
     format: format.combine(
@@ -21,28 +21,35 @@ const logger = createLogger({
     ]
 });
 
+// 使用 morgan 中间件记录 HTTP 请求日志
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+
+// 设置请求主体大小限制
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// 处理跨域预检请求
 app.use((req, res, next) => {
-    res.set({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': '*'
-    });
     if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
+        res.set({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': '*'
+        });
+        res.sendStatus(200);
+    } else {
+        next();
     }
-    next();
 });
 
+<<<<<<< HEAD
 // ...前面的代码保持不变
+=======
+>>>>>>> parent of d4b1a61 (本地部署)
 app.all('*', async (req, res) => {
     const url = new URL(req.originalUrl, `http://${req.headers.host}`);
     const backendUrl = 'https://run-lb.tanmasports.com/v1' + url.pathname + url.search;
 
+<<<<<<< HEAD
     const newHeaders = { ...req.headers };
     delete newHeaders.host;
     delete newHeaders.origin;   // 解决 405 关键：删除跨域源信息
@@ -58,6 +65,29 @@ app.all('*', async (req, res) => {
             body: (req.method === 'GET' || req.method === 'HEAD') ? null : JSON.stringify(req.body)
         });
         const body = await response.text();
+=======
+    logger.info(`Forwarding request to: ${backendUrl}`);
+
+    const newHeaders = { ...req.headers };
+    delete newHeaders.host;
+
+    const init = {
+        method: req.method,
+        headers: newHeaders,
+        body: req.method === 'GET' ? null : JSON.stringify(req.body)
+    };
+
+    try {
+        const response = await fetch(backendUrl, init);
+        const body = await response.text();
+
+        res.set({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': '*'
+        });
+
+>>>>>>> parent of d4b1a61 (本地部署)
         res.status(response.status).send(body);
     } catch (error) {
         res.status(500).send('Internal Server Error');
